@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IMI 경영진 대시보드</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+      background: #f0f2f5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .header {
+      background: #0d1b3e;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      height: 52px;
+      flex-shrink: 0;
+      border-bottom: 2px solid #1a3a6b;
+    }
+
+    .header-title {
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      opacity: 0.85;
+      white-space: nowrap;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 18px;
+      background: rgba(255,255,255,0.2);
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .tab-btn {
+      position: relative;
+      padding: 0 20px;
+      height: 52px;
+      border: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: color 0.2s ease;
+      white-space: nowrap;
+      font-family: inherit;
+    }
+
+    .tab-btn::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #4a9eff;
+      transform: scaleX(0);
+      transition: transform 0.25s ease;
+    }
+
+    .tab-btn:hover {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .tab-btn.active {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .tab-btn.active::after {
+      transform: scaleX(1);
+    }
+
+    .badge {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0;
+      vertical-align: middle;
+    }
+
+    .badge-d1 { background: rgba(74, 158, 255, 0.25); color: #7bbfff; }
+    .badge-d2 { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.45); }
+    .badge-d3 { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.45); }
+
+    .tab-btn.active .badge-d1,
+    .tab-btn.active .badge-d2,
+    .tab-btn.active .badge-d3 {
+      background: rgba(74, 158, 255, 0.3);
+      color: #a8d4ff;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #22c55e;
+      margin-left: auto;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px rgba(34, 197, 94, 0.6);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .frame-container {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sheet-frame {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      background: #fff;
+    }
+
+    .sheet-frame.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: #f0f2f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      z-index: 10;
+      transition: opacity 0.3s ease;
+    }
+
+    .loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid #dde1ea;
+      border-top-color: #0d1b3e;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 12px;
+      color: #8a93a6;
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <span class="header-title">경영진 대시보드</span>
+    <div class="header-divider"></div>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab(0, this)">
+        전일 <span class="badge badge-d1">D-1</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab(1, this)">
+        전전일 <span class="badge badge-d2">D-2</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab(2, this)">
+        전전전일 <span class="badge badge-d3">D-3</span>
+      </button>
+    </div>
+    <div class="status-dot" title="실시간 연동 중"></div>
+  </div>
+
+  <div class="frame-container">
+    <div class="loading-overlay" id="loading">
+      <div class="spinner"></div>
+      <span class="loading-text">데이터 불러오는 중...</span>
+    </div>
+
+    <iframe
+      id="frame-0"
+      class="sheet-frame active"
+      src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSPzhX7NzBENLVblnhdWLLPVxHctBOgQ7Z6O8Vhk5X671NIr84uPN7abbm2TQQIrsFDwEhRdc9rNGWq/pubhtml?gid=237374663&single=true&widget=true&headers=false"
+    ></iframe>
+
+    <iframe
+      id="frame-1"
+      class="sheet-frame"
+      src=""
+      data-src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSPzhX7NzBENLVblnhdWLLPVxHctBOgQ7Z6O8Vhk5X671NIr84uPN7abbm2TQQIrsFDwEhRdc9rNGWq/pubhtml?gid=1185684607&single=true&widget=true&headers=false"
+    ></iframe>
+
+    <iframe
+      id="frame-2"
+      class="sheet-frame"
+      src=""
+      data-src="https://docs.google.com/spreadsheets/d/e/2PACX-1vSPzhX7NzBENLVblnhdWLLPVxHctBOgQ7Z6O8Vhk5X671NIr84uPN7abbm2TQQIrsFDwEhRdc9rNGWq/pubhtml?gid=388279424&single=true&widget=true&headers=false"
+    ></iframe>
+  </div>
+
+  <script>
+    let currentTab = 0;
+    const loadedFrames = new Set([0]);
+
+    // 초기 로딩 처리
+    const firstFrame = document.getElementById('frame-0');
+    firstFrame.addEventListener('load', () => {
+      document.getElementById('loading').classList.add('hidden');
+    });
+
+    function switchTab(index, btn) {
+      if (index === currentTab) return;
+
+      // 탭 버튼 활성화
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // 프레임 전환
+      document.querySelectorAll('.sheet-frame').forEach(f => f.classList.remove('active'));
+      const targetFrame = document.getElementById('frame-' + index);
+
+      // 아직 로드 안 된 프레임이면 로딩 표시 후 src 주입
+      if (!loadedFrames.has(index)) {
+        document.getElementById('loading').classList.remove('hidden');
+        targetFrame.src = targetFrame.dataset.src;
+        targetFrame.addEventListener('load', () => {
+          document.getElementById('loading').classList.add('hidden');
+        }, { once: true });
+        loadedFrames.add(index);
+      }
+
+      targetFrame.classList.add('active');
+      currentTab = index;
+    }
+  </script>
+</body>
+</html>
